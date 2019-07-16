@@ -39,7 +39,7 @@ class ViewController: UIViewController, ARSessionDelegate {
     // Threshold for the difference between
     let thresholdLegs:Float = 0.12
     
-    override func viewWillAppear(_ animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         arView.session.delegate = self
         
@@ -74,12 +74,12 @@ class ViewController: UIViewController, ARSessionDelegate {
     
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         frameCount += 1
-        if frameCount % 10 == 0 {
+        if frameCount > 0 {
             frameCount = 1
             let buffer = frame.capturedImage
             
-            self.bufferHeight = Float(CVPixelBufferGetWidth(buffer))
-            self.bufferWidth  = Float(CVPixelBufferGetHeight(buffer))
+            self.bufferWidth = Float(CVPixelBufferGetWidth(buffer))
+            self.bufferHeight  = Float(CVPixelBufferGetHeight(buffer))
             
             if rootLayerHasLoaded == false {
                 self.loadRootLayer()
@@ -87,22 +87,11 @@ class ViewController: UIViewController, ARSessionDelegate {
                 self.updateLayerGeometry()
             }
             
-            
-            
-            print(self.bufferWidth, self.bufferHeight)
-            
             detector.performDetection(inputBuffer: buffer, completion: {(obs, error) -> Void in
                 guard let observations = obs else {
-                    //                    CATransaction.begin()
-                    //                    CATransaction.setValue(kCFBooleanTrue, forKey: kCATransactionDisableActions)
-                    //                    self.detectionOverlay.sublayers = nil
-                    //                    CATransaction.commit()
                     return
-                    
                 }
-                
                 self.generateBoundingBox(observations: observations)
-                
             })
             
         }
@@ -197,7 +186,7 @@ extension ViewController {
     }
     
     func updateLayerGeometry() {
-        let bounds = rootLayer.bounds
+        let bounds = rootLayer.bounds   
         var scale: CGFloat
         
         let xScale: CGFloat = bounds.size.width / CGFloat(bufferHeight)
@@ -213,8 +202,8 @@ extension ViewController {
         // rotate the layer into screen orientation and scale and mirror
         
         detectionOverlay.setAffineTransform(
-            CGAffineTransform(scaleX: scale, y: -scale)
-            //CGAffineTransform(rotationAngle: CGFloat(.pi * 5.0 / 2.0)).scaledBy(x: scale, y: -scale)
+            //CGAffineTransform(scaleX: scale, y: -scale)
+            CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: scale, y: -scale)
         )
         // center the layer
         detectionOverlay.position = CGPoint (x: bounds.midX, y: bounds.midY)
@@ -236,7 +225,7 @@ extension ViewController {
         textLayer.foregroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])
         textLayer.contentsScale = 2.0 // retina rendering
         // rotate the layer into screen orientation and scale and mirror
-        textLayer.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: 1.0, y: -1.0))
+         textLayer.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: 1.0, y: -1.0))
         return textLayer
     }
     
@@ -244,10 +233,12 @@ extension ViewController {
         print(bounds)
         let shapeLayer = CALayer()
         shapeLayer.bounds = bounds
+        print(bounds)
         shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
         shapeLayer.name = "Found Object"
         shapeLayer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 0.2, 0.4])
         shapeLayer.cornerRadius = 7
+        //.transform = CATransform3DMakeRotation(270.0 / 180.0 * .pi, 0.0, 0.0, 1.0)
         return shapeLayer
     }
 }

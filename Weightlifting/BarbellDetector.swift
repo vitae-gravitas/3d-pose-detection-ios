@@ -20,7 +20,7 @@ public class BarbellDetector {
             let request = VNCoreMLRequest(model: model)
             
             // This setting determines if images are scaled or cropped to fit our 224x224 input size. Here we try scaleFill so we don't cut part of the image.
-            request.imageCropAndScaleOption = VNImageCropAndScaleOption.scaleFill
+            request.imageCropAndScaleOption = .scaleFill
             return request
         } catch {
             fatalError("can't load Vision ML model: \(error)")
@@ -30,7 +30,7 @@ public class BarbellDetector {
     // MARK: - Public functions
     public func performDetection(inputBuffer: CVPixelBuffer, completion: @escaping (_ outputObservation: [VNRecognizedObjectObservation]?, _ error: Error?) -> Void) {
         // Right orientation because the pixel data for image captured by an iOS device is encoded in the camera sensor's native landscape orientation
-        let requestHandler = VNImageRequestHandler(cvPixelBuffer: inputBuffer, orientation: .right)
+        let requestHandler = VNImageRequestHandler(cvPixelBuffer: inputBuffer, orientation: .up)
         
         // We perform our CoreML Requests asynchronously.
         visionQueue.async {
