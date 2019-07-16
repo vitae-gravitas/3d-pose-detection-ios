@@ -26,6 +26,8 @@ class ViewController: UIViewController, ARSessionDelegate {
     
     var detector = BarbellDetector()
     
+    var lineLayers: [CALayer] = []
+    
     var bufferWidth:Float = 0.0
     var bufferHeight:Float = 0.0
     
@@ -138,13 +140,38 @@ class ViewController: UIViewController, ARSessionDelegate {
 
 extension ViewController {
     
+    func getTopResults(_ results: [Any], numResults: Int = 2, targetLabel: String = "mainPlate") -> ArraySlice<VNRecognizedObjectObservation>{
+        var topResults: [VNRecognizedObjectObservation] = []
+        
+        for observation in results where observation is VNRecognizedObjectObservation {
+            guard let objectObservation = observation as? VNRecognizedObjectObservation else {
+                continue
+            }
+            
+            if objectObservation.labels[0].identifier == targetLabel {
+                topResults.append(objectObservation)
+            }
+        }
+        
+        topResults = topResults.sorted(by: { $0.labels[0].confidence > $1.labels[0].confidence })
+        return topResults.prefix(numResults)
+    }
+    
     func generateBoundingBox(observations: [VNRecognizedObjectObservation]) {
         
         CATransaction.begin()
         CATransaction.setValue(kCFBooleanTrue, forKey: kCATransactionDisableActions)
-        detectionOverlay.sublayers = nil
+        for layer in detectionOverlay?.sublayers ?? [] {
+            if layer.name != "Line" {
+                layer.removeFromSuperlayer()
+            } else {
+                if lineLayers.count >= 50 {
+                    lineLayers.remove(at: 0).removeFromSuperlayer()
+                }
+            }
+        }
         
-        for observation in observations where observation is VNRecognizedObjectObservation {
+        for observation in getTopResults(observations) where observation is VNRecognizedObjectObservation {
             guard let objectObservation = observation as? VNRecognizedObjectObservation else {
                 continue
             }
@@ -152,18 +179,21 @@ extension ViewController {
             // Select only the label with the highest confidence.
             let topLabelObservation = objectObservation.labels[0]
             
-            if topLabelObservation.confidence > 0.8 {
-                
-                let objectBounds = VNImageRectForNormalizedRect(objectObservation.boundingBox, Int(bufferWidth), Int(bufferHeight))
-                
-                let shapeLayer = self.createRoundedRectLayerWithBounds(objectBounds)
-                
-                let textLayer = self.createTextSubLayerInBounds(objectBounds,
-                                                                identifier: topLabelObservation.identifier,
-                                                                confidence: topLabelObservation.confidence)
-                shapeLayer.addSublayer(textLayer)
-                detectionOverlay.addSublayer(shapeLayer)
-            }
+            
+            
+            let objectBounds = VNImageRectForNormalizedRect(objectObservation.boundingBox, Int(bufferWidth), Int(bufferHeight))
+            
+            let shapeLayer = self.createRoundedRectLayerWithBounds(objectBounds)
+            
+            let textLayer = self.createTextSubLayerInBounds(objectBounds,
+                                                            identifier: topLabelObservation.identifier,
+                                                            confidence: topLabelObservation.confidence)
+            let lineLayer = self.createLineLayerWithBounds(objectBounds)
+            shapeLayer.addSublayer(textLayer)
+            detectionOverlay.addSublayer(shapeLayer)
+            lineLayers.append(lineLayer)
+            detectionOverlay.addSublayer(lineLayer)
+            
         }
         self.updateLayerGeometry()
         CATransaction.commit()
@@ -225,20 +255,28 @@ extension ViewController {
         textLayer.foregroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])
         textLayer.contentsScale = 2.0 // retina rendering
         // rotate the layer into screen orientation and scale and mirror
-         textLayer.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: 1.0, y: -1.0))
+        textLayer.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: 1.0, y: -1.0))
         return textLayer
     }
     
     func createRoundedRectLayerWithBounds(_ bounds: CGRect) -> CALayer {
-        print(bounds)
         let shapeLayer = CALayer()
         shapeLayer.bounds = bounds
-        print(bounds)
         shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
         shapeLayer.name = "Found Object"
         shapeLayer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 0.2, 0.4])
         shapeLayer.cornerRadius = 7
         //.transform = CATransform3DMakeRotation(270.0 / 180.0 * .pi, 0.0, 0.0, 1.0)
+        return shapeLayer
+    }
+    
+    func createLineLayerWithBounds(_ bounds: CGRect) -> CALayer {
+        let shapeLayer = CALayer()
+        shapeLayer.bounds = CGRect(x: bounds.midX-30, y: bounds.midY-30, width: 30, height: 30)
+        shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        shapeLayer.name = "Line"
+        shapeLayer.backgroundColor = UIColor.red.cgColor
+        shapeLayer.cornerRadius = 15
         return shapeLayer
     }
 }
