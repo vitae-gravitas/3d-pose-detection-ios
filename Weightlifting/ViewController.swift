@@ -188,7 +188,12 @@ extension ViewController {
             }
         }
         
-        for observation in getTopResults(observations) where observation is VNRecognizedObjectObservation {
+        var gotFirst = false
+        var gotSecond = false
+        
+        var topObservations = getTopResults(observations)
+        
+        for observation in topObservations where observation is VNRecognizedObjectObservation {
             guard let objectObservation = observation as? VNRecognizedObjectObservation else {
                 continue
             }
@@ -201,8 +206,7 @@ extension ViewController {
             var fbarbell = true
             var showBounds = false
             let padding:CGFloat = 100.0
-            var gotFirst = false
-            var gotSecond = false
+           
             
             if (firstBarbell.count == 0) {
                 firstBarbell.append(objectBounds)
@@ -237,16 +241,6 @@ extension ViewController {
                 }
             }
             
-            if !gotFirst && gotSecond {
-                if firstBarbell.count > 5 {
-                    objectBounds = self.generateAverageBounds(from: firstBarbell)
-                }
-            } else if !gotSecond && gotFirst {
-                if secondBarbell.count > 5 {
-                    objectBounds = self.generateAverageBounds(from: secondBarbell)
-                }
-            }
-            
             if showBounds {
                 let shapeLayer = self.createRoundedRectLayerWithBounds(fbarbell, bounds: objectBounds)
                 
@@ -259,6 +253,40 @@ extension ViewController {
                 lineLayers.append(lineLayer)
                 detectionOverlay.addSublayer(lineLayer)
             }
+            
+            if topObservations.count == 1 {
+                if gotSecond {
+                    if firstBarbell.count > 5 {
+                        objectBounds = self.generateAverageBounds(from: firstBarbell)
+                        firstBarbell.append(objectBounds)
+                        showBounds = true
+                        fbarbell = true
+                        
+                    }
+                } else if gotFirst {
+                    if secondBarbell.count > 5 {
+                        objectBounds = self.generateAverageBounds(from: secondBarbell)
+                        secondBarbell.append(objectBounds)
+                        showBounds = true
+                        fbarbell = false
+                    }
+                }
+                
+                if showBounds {
+                    let shapeLayer = self.createRoundedRectLayerWithBounds(fbarbell, bounds: objectBounds)
+                    
+                    let textLayer = self.createTextSubLayerInBounds(objectBounds,
+                                                                    identifier: topLabelObservation.identifier,
+                                                                    confidence: topLabelObservation.confidence)
+                    let lineLayer = self.createLineLayerWithBounds(objectBounds)
+                    shapeLayer.addSublayer(textLayer)
+                    detectionOverlay.addSublayer(shapeLayer)
+                    lineLayers.append(lineLayer)
+                    detectionOverlay.addSublayer(lineLayer)
+                }
+                
+            }
+            
             
         }
         self.updateLayerGeometry()
