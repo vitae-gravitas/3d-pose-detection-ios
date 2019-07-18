@@ -27,6 +27,9 @@ class ViewController: UIViewController, ARSessionDelegate {
     var detector = BarbellDetector()
     
     var lineLayers: [CALayer] = []
+    var firstBarbell: [CGRect] = []
+    var secondBarbell: [CGRect] = []
+    
     
     var bufferWidth:Float = 0.0
     var bufferHeight:Float = 0.0
@@ -103,37 +106,37 @@ class ViewController: UIViewController, ARSessionDelegate {
     
     func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
         
-//        guard character != nil else {
-//            print("Character has not been found")
-//            return
-//        }
-//
-//        // This function will update the positions of all the body parts
-//        bodyPartManager.updateBodyParts(with: character!.jointTransforms)
-//
-//        // This is the actual results of the new positions. Currently checking left hip and left knee.
-//        if (bodyPartManager.getDifference(firstType: .leftHip, secondType: .leftKnee, axis: .x) < thresholdLegs) {
-//            print("The left hip and left knee are parallel to each other")
-//        } else {
-//            print("The left hip and left knee are not parallel")
-//        }
-//
-//
-//        // This code is for rendering the skeleton on the devie - ignore
-//        for anchor in anchors {
-//
-//            guard let bodyAnchor = anchor as? ARBodyAnchor else { continue }
-//            let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
-//            characterAnchor.position = bodyPosition
-//            characterAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
-//
-//            if let character = character, character.parent == nil {
-//                // Attach the character to its anchor as soon as
-//                // 1. the body anchor was detected and
-//                // 2. the character was loaded.
-//                characterAnchor.addChild(character)
-//            }
-//        }
+        //        guard character != nil else {
+        //            print("Character has not been found")
+        //            return
+        //        }
+        //
+        //        // This function will update the positions of all the body parts
+        //        bodyPartManager.updateBodyParts(with: character!.jointTransforms)
+        //
+        //        // This is the actual results of the new positions. Currently checking left hip and left knee.
+        //        if (bodyPartManager.getDifference(firstType: .leftHip, secondType: .leftKnee, axis: .x) < thresholdLegs) {
+        //            print("The left hip and left knee are parallel to each other")
+        //        } else {
+        //            print("The left hip and left knee are not parallel")
+        //        }
+        //
+        //
+        //        // This code is for rendering the skeleton on the devie - ignore
+        //        for anchor in anchors {
+        //
+        //            guard let bodyAnchor = anchor as? ARBodyAnchor else { continue }
+        //            let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
+        //            characterAnchor.position = bodyPosition
+        //            characterAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
+        //
+        //            if let character = character, character.parent == nil {
+        //                // Attach the character to its anchor as soon as
+        //                // 1. the body anchor was detected and
+        //                // 2. the character was loaded.
+        //                characterAnchor.addChild(character)
+        //            }
+        //        }
     }
 }
 
@@ -153,7 +156,7 @@ extension ViewController {
                 var append = true
                 if topResults.count > 0 {
                     for result in topResults {
-                          if self.boundingBoxOverlap(bb1: result.boundingBox, bb2: objectObservation.boundingBox) {
+                        if self.boundingBoxOverlap(bb1: result.boundingBox, bb2: objectObservation.boundingBox) {
                             append = false
                         }
                     }
@@ -193,9 +196,27 @@ extension ViewController {
             // Select only the label with the highest confidence.
             let topLabelObservation = objectObservation.labels[0]
             
-            let objectBounds = VNImageRectForNormalizedRect(objectObservation.boundingBox, Int(bufferWidth), Int(bufferHeight))
+            var objectBounds = VNImageRectForNormalizedRect(objectObservation.boundingBox, Int(bufferWidth), Int(bufferHeight))
             
-            let shapeLayer = self.createRoundedRectLayerWithBounds(objectBounds)
+            var fbarbell = true
+            if (firstBarbell.count == 0) {
+                firstBarbell.append(objectBounds)
+            } else {
+                if objectBounds.intersects(firstBarbell.last!) {
+                    
+                    objectBounds = updateBarbellRect(firstBarbell, objectBounds)
+                    firstBarbell.append(objectBounds)
+                } else {
+                    
+                    fbarbell = false
+                    objectBounds = updateBarbellRect(secondBarbell, objectBounds)
+                    secondBarbell.append(objectBounds)
+                }
+            }
+            
+            
+            
+            let shapeLayer = self.createRoundedRectLayerWithBounds(fbarbell, bounds: objectBounds)
             
             let textLayer = self.createTextSubLayerInBounds(objectBounds,
                                                             identifier: topLabelObservation.identifier,
@@ -209,6 +230,35 @@ extension ViewController {
         }
         self.updateLayerGeometry()
         CATransaction.commit()
+    }
+    
+    func updateBarbellRect(_ frames: [CGRect], _ rect: CGRect) -> CGRect {
+        if (frames.count < 5) {
+            return rect
+        }
+        let finalFrames = frames.suffix(20)
+        var width:CGFloat = 0.0
+        var height:CGFloat = 0.0
+        for rect in finalFrames {
+            width = width + rect.width
+            height = height + rect.height
+        }
+        
+        let diffX = rect.origin.x - finalFrames.last!.origin.x
+        print(diffX)
+        var rect = CGRect(x: finalFrames.last!.origin.x + 0.4 * diffX, y: rect.origin.y, width: rect.width, height: rect.height)
+        
+        var ratio:CGFloat = 0.7
+        
+        width = ratio * (width / CGFloat(finalFrames.count)) + (1-ratio) * (rect.width)
+        height = ratio * (height / CGFloat(finalFrames.count)) + (1-ratio) * (rect.height)
+        
+        ratio = 0.7
+        
+        let newX = (rect.midX - width/2.0)
+        let newY = (rect.midY - height/2.0)
+        
+        return CGRect(x: newX, y: newY, width: width, height: height)
     }
     
     func loadRootLayer() {
@@ -271,12 +321,16 @@ extension ViewController {
         return textLayer
     }
     
-    func createRoundedRectLayerWithBounds(_ bounds: CGRect) -> CALayer {
+    func createRoundedRectLayerWithBounds(_ barbell: Bool,  bounds: CGRect) -> CALayer {
         let shapeLayer = CALayer()
         shapeLayer.bounds = bounds
         shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
         shapeLayer.name = "Found Object"
-        shapeLayer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 0.2, 0.4])
+        if (barbell) {
+            shapeLayer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 0.2, 0.4])
+        } else {
+            shapeLayer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.2, 1.0, 1.0, 0.4])
+        }
         shapeLayer.cornerRadius = 7
         //.transform = CATransform3DMakeRotation(270.0 / 180.0 * .pi, 0.0, 0.0, 1.0)
         return shapeLayer
