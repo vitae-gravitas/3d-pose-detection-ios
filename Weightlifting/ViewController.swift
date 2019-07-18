@@ -199,37 +199,86 @@ extension ViewController {
             var objectBounds = VNImageRectForNormalizedRect(objectObservation.boundingBox, Int(bufferWidth), Int(bufferHeight))
             
             var fbarbell = true
+            var showBounds = false
+            let padding:CGFloat = 100.0
+            
             if (firstBarbell.count == 0) {
                 firstBarbell.append(objectBounds)
+                showBounds = true
             } else {
                 if objectBounds.intersects(firstBarbell.last!) {
-                    
                     objectBounds = updateBarbellRect(firstBarbell, objectBounds)
-                    firstBarbell.append(objectBounds)
+                    if objectBounds.intersection(firstBarbell.last!).width > padding
+                        && objectBounds.intersection(firstBarbell.last!).height > padding {
+                        firstBarbell.append(objectBounds)
+                        showBounds = true
+                    }
+                    
                 } else {
                     
                     fbarbell = false
                     objectBounds = updateBarbellRect(secondBarbell, objectBounds)
-                    secondBarbell.append(objectBounds)
+                    if secondBarbell.count > 0 {
+                        if objectBounds.intersection(secondBarbell.last!).width > padding
+                            && objectBounds.intersection(secondBarbell.last!).height > padding {
+                            secondBarbell.append(objectBounds)
+                            showBounds = true
+                        }
+                    } else {
+                        secondBarbell.append(objectBounds)
+                        showBounds = true
+                    }
+                    
                 }
+            } 
+            
+            if showBounds {
+                let shapeLayer = self.createRoundedRectLayerWithBounds(fbarbell, bounds: objectBounds)
+                
+                let textLayer = self.createTextSubLayerInBounds(objectBounds,
+                                                                identifier: topLabelObservation.identifier,
+                                                                confidence: topLabelObservation.confidence)
+                let lineLayer = self.createLineLayerWithBounds(objectBounds)
+                shapeLayer.addSublayer(textLayer)
+                detectionOverlay.addSublayer(shapeLayer)
+                lineLayers.append(lineLayer)
+                //detectionOverlay.addSublayer(lineLayer)
             }
-            
-            
-            
-            let shapeLayer = self.createRoundedRectLayerWithBounds(fbarbell, bounds: objectBounds)
-            
-            let textLayer = self.createTextSubLayerInBounds(objectBounds,
-                                                            identifier: topLabelObservation.identifier,
-                                                            confidence: topLabelObservation.confidence)
-            let lineLayer = self.createLineLayerWithBounds(objectBounds)
-            shapeLayer.addSublayer(textLayer)
-            detectionOverlay.addSublayer(shapeLayer)
-            lineLayers.append(lineLayer)
-            //detectionOverlay.addSublayer(lineLayer)
             
         }
         self.updateLayerGeometry()
         CATransaction.commit()
+    }
+    
+    // Made this function to prevent flickering of bounds, needs some work
+    func shouldIncludeBounds(firstB: Bool, bounds: CGRect) -> Bool {
+        var lastTenFrames:[CGRect] = []
+        if firstB {
+            if (firstBarbell.count < 20) {
+                return true
+            }
+            lastTenFrames = firstBarbell.suffix(20)
+        } else {
+            if (secondBarbell.count < 20) {
+                return true
+            }
+            lastTenFrames = secondBarbell.suffix(20)
+        }
+        
+        let count = CGFloat(lastTenFrames.count)
+        let averageRect: CGRect
+        var width:CGFloat = 0
+        var height:CGFloat = 0
+        var x:CGFloat = 0
+        var y:CGFloat = 0
+        for frame in lastTenFrames {
+            width = width + frame.width
+            height = height + frame.height
+            x = frame.origin.x
+            y = frame.origin.y
+        }
+        averageRect = CGRect(x: x/count, y: y/count, width: width/count, height: height/count)
+        return averageRect.intersects(bounds)
     }
     
     func updateBarbellRect(_ frames: [CGRect], _ rect: CGRect) -> CGRect {
@@ -245,15 +294,13 @@ extension ViewController {
         }
         
         let diffX = rect.origin.x - finalFrames.last!.origin.x
-        print(diffX)
+        //print(diffX)
         var rect = CGRect(x: finalFrames.last!.origin.x + 0.4 * diffX, y: rect.origin.y, width: rect.width, height: rect.height)
         
         var ratio:CGFloat = 0.7
         
         width = ratio * (width / CGFloat(finalFrames.count)) + (1-ratio) * (rect.width)
         height = ratio * (height / CGFloat(finalFrames.count)) + (1-ratio) * (rect.height)
-        
-        ratio = 0.7
         
         let newX = (rect.midX - width/2.0)
         let newY = (rect.midY - height/2.0)
