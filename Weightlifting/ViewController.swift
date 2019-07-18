@@ -32,6 +32,7 @@ class ViewController: UIViewController, ARSessionDelegate {
     var bufferHeight:Float = 0.0
     
     var rootLayerHasLoaded = false
+    var color = UIColor.red.cgColor
     
     var frameCount = 0
     
@@ -102,37 +103,37 @@ class ViewController: UIViewController, ARSessionDelegate {
     
     func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
         
-        guard character != nil else {
-            print("Character has not been found")
-            return
-        }
-        
-        // This function will update the positions of all the body parts
-        bodyPartManager.updateBodyParts(with: character!.jointTransforms)
-        
-        // This is the actual results of the new positions. Currently checking left hip and left knee. 
-        if (bodyPartManager.getDifference(firstType: .leftHip, secondType: .leftKnee, axis: .x) < thresholdLegs) {
-            print("The left hip and left knee are parallel to each other")
-        } else {
-            print("The left hip and left knee are not parallel")
-        }
-        
-        
-        // This code is for rendering the skeleton on the devie - ignore
-        for anchor in anchors {
-            
-            guard let bodyAnchor = anchor as? ARBodyAnchor else { continue }
-            let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
-            characterAnchor.position = bodyPosition
-            characterAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
-            
-            if let character = character, character.parent == nil {
-                // Attach the character to its anchor as soon as
-                // 1. the body anchor was detected and
-                // 2. the character was loaded.
-                characterAnchor.addChild(character)
-            }
-        }
+//        guard character != nil else {
+//            print("Character has not been found")
+//            return
+//        }
+//
+//        // This function will update the positions of all the body parts
+//        bodyPartManager.updateBodyParts(with: character!.jointTransforms)
+//
+//        // This is the actual results of the new positions. Currently checking left hip and left knee.
+//        if (bodyPartManager.getDifference(firstType: .leftHip, secondType: .leftKnee, axis: .x) < thresholdLegs) {
+//            print("The left hip and left knee are parallel to each other")
+//        } else {
+//            print("The left hip and left knee are not parallel")
+//        }
+//
+//
+//        // This code is for rendering the skeleton on the devie - ignore
+//        for anchor in anchors {
+//
+//            guard let bodyAnchor = anchor as? ARBodyAnchor else { continue }
+//            let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
+//            characterAnchor.position = bodyPosition
+//            characterAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
+//
+//            if let character = character, character.parent == nil {
+//                // Attach the character to its anchor as soon as
+//                // 1. the body anchor was detected and
+//                // 2. the character was loaded.
+//                characterAnchor.addChild(character)
+//            }
+//        }
     }
 }
 
@@ -149,12 +150,25 @@ extension ViewController {
             }
             
             if objectObservation.labels[0].identifier == targetLabel {
-                topResults.append(objectObservation)
+                var append = true
+                if topResults.count > 0 {
+                    for result in topResults {
+                          if self.boundingBoxOverlap(bb1: result.boundingBox, bb2: objectObservation.boundingBox) {
+                            append = false
+                        }
+                    }
+                }
+                if append {
+                    topResults.append(objectObservation)
+                }
             }
         }
-        
         topResults = topResults.sorted(by: { $0.labels[0].confidence > $1.labels[0].confidence })
         return topResults.prefix(numResults)
+    }
+    
+    func boundingBoxOverlap(bb1: CGRect, bb2: CGRect) -> Bool {
+        return bb1.intersects(bb2)
     }
     
     func generateBoundingBox(observations: [VNRecognizedObjectObservation]) {
@@ -179,8 +193,6 @@ extension ViewController {
             // Select only the label with the highest confidence.
             let topLabelObservation = objectObservation.labels[0]
             
-            
-            
             let objectBounds = VNImageRectForNormalizedRect(objectObservation.boundingBox, Int(bufferWidth), Int(bufferHeight))
             
             let shapeLayer = self.createRoundedRectLayerWithBounds(objectBounds)
@@ -192,7 +204,7 @@ extension ViewController {
             shapeLayer.addSublayer(textLayer)
             detectionOverlay.addSublayer(shapeLayer)
             lineLayers.append(lineLayer)
-            detectionOverlay.addSublayer(lineLayer)
+            //detectionOverlay.addSublayer(lineLayer)
             
         }
         self.updateLayerGeometry()
@@ -275,7 +287,10 @@ extension ViewController {
         shapeLayer.bounds = CGRect(x: bounds.midX-30, y: bounds.midY-30, width: 30, height: 30)
         shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
         shapeLayer.name = "Line"
-        shapeLayer.backgroundColor = UIColor.red.cgColor
+        shapeLayer.backgroundColor = self.color
+        if self.color == UIColor.red.cgColor {
+            self.color = UIColor.blue.cgColor
+        } else { self.color = UIColor.red.cgColor }
         shapeLayer.cornerRadius = 15
         return shapeLayer
     }
