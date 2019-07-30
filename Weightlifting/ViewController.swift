@@ -6,64 +6,62 @@
 //  Copyright © 2019 Avinash Jain. All rights reserved.
 //
 
-import UIKit
-import RealityKit
 import ARKit
 import CoreML
+import RealityKit
+import UIKit
 import Vision
 
-class ViewController: UIViewController, ARSessionDelegate {
-    
+class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDelegate {
     @IBOutlet var arView: ARView!
-    @IBOutlet weak var previewView: UIView!
-    
-    var rootLayer: CALayer! = nil
-    var detectionOverlay: CALayer! = nil
+    @IBOutlet var previewView: UIView!
+
+    var rootLayer: CALayer!
+    var detectionOverlay: CALayer!
     // The 3D character to display.
     var character: BodyTrackedEntity?
     let characterOffset: SIMD3<Float> = [-1.0, 0, 0] // Offset the character by one meter to the left
     let characterAnchor = AnchorEntity()
-    
+
     var detector = BarbellDetector()
-    
+
     var lineLayers: [CALayer] = []
     var firstBarbell: [CGRect] = []
     var secondBarbell: [CGRect] = []
-    
-    
-    var bufferWidth:Float = 0.0
-    var bufferHeight:Float = 0.0
-    
+    var barbellManager = BarbellManager()
+
+    var bufferWidth: Float = 0.0
+    var bufferHeight: Float = 0.0
+
     var rootLayerHasLoaded = false
     var color = UIColor.red.cgColor
-    
+
     var frameCount = 0
-    
+
     // Sets up BodyPartManager with what body part types to track
     var bodyPartManager = BodyPartManager(with: [.leftHip, .leftKnee, .rightHip, .rightKnee])
-    
+
     // Threshold for the difference between
-    let thresholdLegs:Float = 0.12
-    
+    let thresholdLegs: Float = 0.12
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         arView.session.delegate = self
-        
+
         // If the iOS device doesn't support body tracking, raise a developer error for
         // this unhandled case.
         guard ARBodyTrackingConfiguration.isSupported else {
             fatalError("This feature is only supported on devices with an A12 chip")
         }
-        
+
         // Run a body tracking configration.
         let configuration = ARBodyTrackingConfiguration()
         arView.session.run(configuration)
-        
+
         // Comment this line out if you don't want the 3D skeleton to render on the iPhone
         arView.scene.addAnchor(characterAnchor)
-        
+
         // Asynchronously load the 3D character.
-        
         _ = Entity.loadBodyTrackedAsync(named: "character/robot").sink(receiveCompletion: { completion in
             if case let .failure(error) = completion {
                 print("Error: Unable to load model: \(error.localizedDescription)")
@@ -77,74 +75,77 @@ class ViewController: UIViewController, ARSessionDelegate {
             }
         })
     }
-    
-    func session(_ session: ARSession, didUpdate frame: ARFrame) {
-        frameCount += 1
-        if frameCount > 0 {
-            frameCount = 1
+
+    func session(_: ARSession, didUpdate frame: ARFrame) {
+        let buffer = frame.capturedImage
+
+        bufferWidth = Float(CVPixelBufferGetWidth(buffer))
+        bufferHeight = Float(CVPixelBufferGetHeight(buffer))
+
+        if rootLayerHasLoaded == false {
+            loadRootLayer()
+            loadDetectionOverlay()
+            updateLayerGeometry()
+        }
+
+        if barbellManager.frontBarbellInitial != nil {
             let buffer = frame.capturedImage
-            
-            self.bufferWidth = Float(CVPixelBufferGetWidth(buffer))
-            self.bufferHeight  = Float(CVPixelBufferGetHeight(buffer))
-            
-            if rootLayerHasLoaded == false {
-                self.loadRootLayer()
-                self.loadDetectionOverlay()
-                self.updateLayerGeometry()
-            }
-            
-            detector.performDetection(inputBuffer: buffer, completion: {(obs, error) -> Void in
+            detector.performDetection(buffer: buffer, completion: { (obs, _) -> Void in
                 guard let observations = obs else {
                     return
                 }
                 self.generateBoundingBox(observations: observations)
             })
+        }
+    }
+
+    func session(_: ARSession, didUpdate anchors: [ARAnchor]) {
+        guard character != nil else {
+            print("Character has not been found")
+            return
+        }
+
+        // This function will update the positions of all the body parts
+        bodyPartManager.updateBodyParts(with: character!.jointTransforms)
+
+        // This is the actual results of the new positions. Currently checking left hip and left knee.
+        if bodyPartManager.getDifference(firstType: .leftHip, secondType: .leftKnee, axis: .x) < thresholdLegs {
+            print("The left hip and left knee are parallel to each other")
+        } else {
+            print("The left hip and left knee are not parallel")
+        }
+
+        // This code is for rendering the skeleton on the devie - ignore
+        for anchor in anchors {
+            guard let bodyAnchor = anchor as? ARBodyAnchor else { continue }
+            let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
+            characterAnchor.position = bodyPosition
+            characterAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
+
+            if let character = character, character.parent == nil {
+                // Attach the character to its anchor as soon as
+                // 1. the body anchor was detected and
+                // 2. the character was loaded.
+                characterAnchor.addChild(character)
+            }
+        }
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with _: UIEvent?) {
+        if let touch = touches.first {
+            var position = touch.location(in: arView)
+            position = self.rootLayer.convert(position, to: self.detectionOverlay)
             
+            print(position)
+            if barbellManager.frontBarbellInitial == nil {
+                barbellManager.setBarbellInitial(position: position, type: .front)
+            } else if barbellManager.backBarbellInitial == nil {
+                barbellManager.setBarbellInitial(position: position, type: .back)
+            }
         }
     }
     
-    
-    func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
-        
-        //        guard character != nil else {
-        //            print("Character has not been found")
-        //            return
-        //        }
-        //
-        //        // This function will update the positions of all the body parts
-        //        bodyPartManager.updateBodyParts(with: character!.jointTransforms)
-        //
-        //        // This is the actual results of the new positions. Currently checking left hip and left knee.
-        //        if (bodyPartManager.getDifference(firstType: .leftHip, secondType: .leftKnee, axis: .x) < thresholdLegs) {
-        //            print("The left hip and left knee are parallel to each other")
-        //        } else {
-        //            print("The left hip and left knee are not parallel")
-        //        }
-        //
-        //
-        //        // This code is for rendering the skeleton on the devie - ignore
-        //        for anchor in anchors {
-        //
-        //            guard let bodyAnchor = anchor as? ARBodyAnchor else { continue }
-        //            let bodyPosition = simd_make_float3(bodyAnchor.transform.columns.3)
-        //            characterAnchor.position = bodyPosition
-        //            characterAnchor.orientation = Transform(matrix: bodyAnchor.transform).rotation
-        //
-        //            if let character = character, character.parent == nil {
-        //                // Attach the character to its anchor as soon as
-        //                // 1. the body anchor was detected and
-        //                // 2. the character was loaded.
-        //                characterAnchor.addChild(character)
-        //            }
-        //        }
-    }
-}
-
-// MARK:- UI Code to render bounding box
-
-extension ViewController {
-    
-    func getTopResults(_ results: [Any], numResults: Int = 2, targetLabel: String = "mainPlate") -> ArraySlice<VNRecognizedObjectObservation>{
+    func getTopResults(_ results: [Any], numResults: Int = 2, targetLabel: String = "mainPlate") -> ArraySlice<VNRecognizedObjectObservation> {
         var topResults: [VNRecognizedObjectObservation] = []
         
         for observation in results where observation is VNRecognizedObjectObservation {
@@ -153,17 +154,7 @@ extension ViewController {
             }
             
             if objectObservation.labels[0].identifier == targetLabel {
-                var append = true
-                if topResults.count > 0 {
-                    for result in topResults {
-                        if self.boundingBoxOverlap(bb1: result.boundingBox, bb2: objectObservation.boundingBox) {
-                            append = false
-                        }
-                    }
-                }
-                if append {
-                    topResults.append(objectObservation)
-                }
+                topResults.append(objectObservation)
             }
         }
         topResults = topResults.sorted(by: { $0.labels[0].confidence > $1.labels[0].confidence })
@@ -175,7 +166,6 @@ extension ViewController {
     }
     
     func generateBoundingBox(observations: [VNRecognizedObjectObservation]) {
-        
         CATransaction.begin()
         CATransaction.setValue(kCFBooleanTrue, forKey: kCATransactionDisableActions)
         for layer in detectionOverlay?.sublayers ?? [] {
@@ -196,122 +186,31 @@ extension ViewController {
             // Select only the label with the highest confidence.
             let topLabelObservation = objectObservation.labels[0]
             
-            var objectBounds = VNImageRectForNormalizedRect(objectObservation.boundingBox, Int(bufferWidth), Int(bufferHeight))
+            var objectBounds = VNImageRectForNormalizedRect( objectObservation.boundingBox, Int(self.bufferWidth), Int(self.bufferHeight))
             
-            var fbarbell = true
-            var showBounds = false
-            let padding:CGFloat = 100.0
-            var gotFirst = false
-            var gotSecond = false
+            let boundData = self.barbellManager.analyzeObservation(objectBounds: objectBounds)
             
-            if (firstBarbell.count == 0) {
-                firstBarbell.append(objectBounds)
-                showBounds = true
-                gotFirst = true
-            } else {
-                if objectBounds.intersects(firstBarbell.last!) {
-                    objectBounds = updateBarbellRect(firstBarbell, objectBounds)
-                    if objectBounds.intersection(firstBarbell.last!).width > padding
-                        && objectBounds.intersection(firstBarbell.last!).height > padding {
-                        firstBarbell.append(objectBounds)
-                        showBounds = true
-                        gotFirst = true
-                    }
-                    
-                } else {
-                    
-                    fbarbell = false
-                    objectBounds = updateBarbellRect(secondBarbell, objectBounds)
-                    if secondBarbell.count > 0 {
-                        if objectBounds.intersection(secondBarbell.last!).width > padding
-                            && objectBounds.intersection(secondBarbell.last!).height > padding {
-                            secondBarbell.append(objectBounds)
-                            showBounds = true
-                            gotSecond = true
-                        }
-                    } else {
-                        secondBarbell.append(objectBounds)
-                        showBounds = true
-                        gotSecond = true
-                    }
-                }
+            guard let boundRect = boundData.0 else {
+                continue
+            }
+            guard let boundType = boundData.1 else {
+                continue
             }
             
-            if !gotFirst && gotSecond {
-                if firstBarbell.count > 5 {
-                    objectBounds = self.generateAverageBounds(from: firstBarbell)
-                }
-            } else if !gotSecond && gotFirst {
-                if secondBarbell.count > 5 {
-                    objectBounds = self.generateAverageBounds(from: secondBarbell)
-                }
-            }
+            let shapeLayer = self.barbellManager.createRoundedRectLayerWithBounds(boundType, bounds: boundRect)
             
-            if showBounds {
-                let shapeLayer = self.createRoundedRectLayerWithBounds(fbarbell, bounds: objectBounds)
-                
-                let textLayer = self.createTextSubLayerInBounds(objectBounds,
-                                                                identifier: topLabelObservation.identifier,
-                                                                confidence: topLabelObservation.confidence)
-                let lineLayer = self.createLineLayerWithBounds(objectBounds)
-                shapeLayer.addSublayer(textLayer)
-                detectionOverlay.addSublayer(shapeLayer)
-                lineLayers.append(lineLayer)
-                detectionOverlay.addSublayer(lineLayer)
-            }
+            let textLayer = self.barbellManager.createTextSubLayerInBounds(boundRect,
+                                                                           identifier: topLabelObservation.identifier,
+                                                                           confidence: topLabelObservation.confidence.magnitude)
             
+            shapeLayer.addSublayer(textLayer)
+            detectionOverlay.addSublayer(shapeLayer)
+            //            let lineLayer = self.barbellManager.createLineLayerWithBounds(boundRect)
+            //            lineLayers.append(lineLayer)
+            //            detectionOverlay.addSublayer(lineLayer)
         }
-        self.updateLayerGeometry()
+        updateLayerGeometry()
         CATransaction.commit()
-    }
-    
-    // Made this function to prevent flickering of bounds, needs some work
-    func generateAverageBounds(from frames: [CGRect]) -> CGRect {
-        let lastFrames = Array(frames.suffix(3))
-        
-        let count = CGFloat(lastFrames.count)
-        
-        var averageDiffX:CGFloat = 0
-        var averageDiffY:CGFloat = 0
-        for index in 0..<lastFrames.count-1 {
-            let diffX = lastFrames[index].origin.x - lastFrames[index+1].origin.x
-            let diffY = lastFrames[index].origin.y - lastFrames[index+1].origin.y
-            averageDiffX = averageDiffX + diffX
-            averageDiffY = averageDiffY + diffY
-        }
-        
-        averageDiffX = averageDiffX / (count-1)
-        averageDiffY = averageDiffY / (count-1)
-        
-        let averageRect = CGRect(x: frames.last!.origin.x+averageDiffX, y: frames.last!.origin.y+averageDiffY, width: frames.last!.width, height: frames.last!.height)
-        return averageRect
-    }
-    
-    func updateBarbellRect(_ frames: [CGRect], _ rect: CGRect) -> CGRect {
-        if (frames.count < 5) {
-            return rect
-        }
-        let finalFrames = frames.suffix(20)
-        var width:CGFloat = 0.0
-        var height:CGFloat = 0.0
-        for rect in finalFrames {
-            width = width + rect.width
-            height = height + rect.height
-        }
-        
-        let diffX = rect.origin.x - finalFrames.last!.origin.x
-        //print(diffX)
-        var rect = CGRect(x: finalFrames.last!.origin.x + 0.4 * diffX, y: rect.origin.y, width: rect.width, height: rect.height)
-        
-        var ratio:CGFloat = 0.7
-        
-        width = ratio * (width / CGFloat(finalFrames.count)) + (1-ratio) * (rect.width)
-        height = ratio * (height / CGFloat(finalFrames.count)) + (1-ratio) * (rect.height)
-        
-        let newX = (rect.midX - width/2.0)
-        let newY = (rect.midY - height/2.0)
-        
-        return CGRect(x: newX, y: newY, width: width, height: height)
     }
     
     func loadRootLayer() {
@@ -331,7 +230,7 @@ extension ViewController {
     }
     
     func updateLayerGeometry() {
-        let bounds = rootLayer.bounds   
+        let bounds = rootLayer.bounds
         var scale: CGFloat
         
         let xScale: CGFloat = bounds.size.width / CGFloat(bufferHeight)
@@ -347,7 +246,6 @@ extension ViewController {
         // rotate the layer into screen orientation and scale and mirror
         
         detectionOverlay.setAffineTransform(
-            //CGAffineTransform(scaleX: scale, y: -scale)
             CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: scale, y: -scale)
         )
         // center the layer
@@ -356,48 +254,37 @@ extension ViewController {
         CATransaction.commit()
     }
     
-    func createTextSubLayerInBounds(_ bounds: CGRect, identifier: String, confidence: VNConfidence) -> CATextLayer {
-        let textLayer = CATextLayer()
-        textLayer.name = "Object Label"
-        let formattedString = NSMutableAttributedString(string: String(format: "\(identifier)\nConfidence:  %.2f", confidence))
-        let largeFont = UIFont(name: "Helvetica", size: 24.0)!
-        formattedString.addAttributes([NSAttributedString.Key.font: largeFont], range: NSRange(location: 0, length: identifier.count))
-        textLayer.string = formattedString
-        textLayer.bounds = CGRect(x: 0, y: 0, width: bounds.size.height - 10, height: bounds.size.width - 10)
-        textLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
-        textLayer.shadowOpacity = 0.7
-        textLayer.shadowOffset = CGSize(width: 2, height: 2)
-        textLayer.foregroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])
-        textLayer.contentsScale = 2.0 // retina rendering
-        // rotate the layer into screen orientation and scale and mirror
-        textLayer.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: 1.0, y: -1.0))
-        return textLayer
-    }
     
-    func createRoundedRectLayerWithBounds(_ barbell: Bool,  bounds: CGRect) -> CALayer {
-        let shapeLayer = CALayer()
-        shapeLayer.bounds = bounds
-        shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
-        shapeLayer.name = "Found Object"
-        if (barbell) {
-            shapeLayer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 0.2, 0.4])
-        } else {
-            shapeLayer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.2, 1.0, 1.0, 0.4])
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    // Made this function to prevent flickering of bounds, needs some work
+    func generateAverageBounds(from frames: [CGRect]) -> CGRect {
+        let lastFrames = Array(frames.suffix(3))
+        
+        let count = CGFloat(lastFrames.count)
+        
+        var averageDiffX: CGFloat = 0
+        var averageDiffY: CGFloat = 0
+        for index in 0 ..< lastFrames.count - 1 {
+            let diffX = lastFrames[index].origin.x - lastFrames[index + 1].origin.x
+            let diffY = lastFrames[index].origin.y - lastFrames[index + 1].origin.y
+            averageDiffX = averageDiffX + diffX
+            averageDiffY = averageDiffY + diffY
         }
-        shapeLayer.cornerRadius = 7
-        //.transform = CATransform3DMakeRotation(270.0 / 180.0 * .pi, 0.0, 0.0, 1.0)
-        return shapeLayer
+        
+        averageDiffX = averageDiffX / (count - 1)
+        averageDiffY = averageDiffY / (count - 1)
+        
+        let averageRect = CGRect(x: frames.last!.origin.x + averageDiffX, y: frames.last!.origin.y + averageDiffY, width: frames.last!.width, height: frames.last!.height)
+        return averageRect
     }
     
-    func createLineLayerWithBounds(_ bounds: CGRect) -> CALayer {
-        let shapeLayer = CALayer()
-        shapeLayer.bounds = CGRect(x: bounds.midX-30, y: bounds.midY-30, width: 30, height: 30)
-        shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
-        shapeLayer.name = "Line"
-        shapeLayer.backgroundColor = self.color
-        shapeLayer.cornerRadius = 15
-        return shapeLayer
-    }
 }
-
-

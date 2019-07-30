@@ -17,6 +17,8 @@
 		E18993BA22C55678006634A6 /* BodyPartManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18993B922C55678006634A6 /* BodyPartManager.swift */; };
 		E1BCAA2422CFFCDC00A5DB8D /* BarbellModel.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = E1BCAA2322CFFCDC00A5DB8D /* BarbellModel.mlmodel */; };
 		E1BCAA2822CFFD8F00A5DB8D /* BarbellDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1BCAA2722CFFD8F00A5DB8D /* BarbellDetector.swift */; };
+		E1F849B322E82A0A001302AD /* BoundingBoxDrawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F849B222E82A0A001302AD /* BoundingBoxDrawing.swift */; };
+		E1F849B522E82EAB001302AD /* BarbellManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F849B422E82EAB001302AD /* BarbellManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +34,8 @@
 		E18993B922C55678006634A6 /* BodyPartManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyPartManager.swift; sourceTree = "<group>"; };
 		E1BCAA2322CFFCDC00A5DB8D /* BarbellModel.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; name = BarbellModel.mlmodel; path = "../../../../Downloads/object-detection-coreml-xcode-master/SlaloML/BarbellModel.mlmodel"; sourceTree = "<group>"; };
 		E1BCAA2722CFFD8F00A5DB8D /* BarbellDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarbellDetector.swift; sourceTree = "<group>"; };
+		E1F849B222E82A0A001302AD /* BoundingBoxDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundingBoxDrawing.swift; sourceTree = "<group>"; };
+		E1F849B422E82EAB001302AD /* BarbellManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarbellManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +70,8 @@
 			children = (
 				E14D129722AF6DEE006ADB09 /* AppDelegate.swift */,
 				E14D129922AF6DEE006ADB09 /* ViewController.swift */,
+				E1F849B422E82EAB001302AD /* BarbellManager.swift */,
+				E1F849B222E82A0A001302AD /* BoundingBoxDrawing.swift */,
 				E18993B922C55678006634A6 /* BodyPartManager.swift */,
 				E1BCAA2722CFFD8F00A5DB8D /* BarbellDetector.swift */,
 				E14D129B22AF6DEE006ADB09 /* Main.storyboard */,
@@ -153,9 +159,11 @@
 			files = (
 				E1BCAA2422CFFCDC00A5DB8D /* BarbellModel.mlmodel in Sources */,
 				E18993BA22C55678006634A6 /* BodyPartManager.swift in Sources */,
+				E1F849B322E82A0A001302AD /* BoundingBoxDrawing.swift in Sources */,
 				E14D129A22AF6DEE006ADB09 /* ViewController.swift in Sources */,
 				E14D129822AF6DEE006ADB09 /* AppDelegate.swift in Sources */,
 				E1BCAA2822CFFD8F00A5DB8D /* BarbellDetector.swift in Sources */,
+				E1F849B522E82EAB001302AD /* BarbellManager.swift in Sources */,
 				E14D129F22AF6DEE006ADB09 /* Experience.rcproject in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

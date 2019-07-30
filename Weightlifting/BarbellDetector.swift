@@ -28,9 +28,8 @@ public class BarbellDetector {
     }()
     
     // MARK: - Public functions
-    public func performDetection(inputBuffer: CVPixelBuffer, completion: @escaping (_ outputObservation: [VNRecognizedObjectObservation]?, _ error: Error?) -> Void) {
-        // Right orientation because the pixel data for image captured by an iOS device is encoded in the camera sensor's native landscape orientation
-        let requestHandler = VNImageRequestHandler(cvPixelBuffer: inputBuffer, orientation: .up)
+    public func performDetection(buffer: CVPixelBuffer, completion: @escaping (_ outputObservation: [VNRecognizedObjectObservation]?, _ error: Error?) -> Void) {
+        let requestHandler = VNImageRequestHandler(cvPixelBuffer: buffer, orientation: .up, options: [:])
         
         // We perform our CoreML Requests asynchronously.
         visionQueue.async {
