@@ -15,11 +15,70 @@
 		E14D12A422AF6DEF006ADB09 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E14D12A222AF6DEF006ADB09 /* LaunchScreen.storyboard */; };
 		E16638FC22B5A6AA000EB8F7 /* character in Resources */ = {isa = PBXBuildFile; fileRef = E16638FB22B5A6AA000EB8F7 /* character */; };
 		E18993BA22C55678006634A6 /* BodyPartManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E18993B922C55678006634A6 /* BodyPartManager.swift */; };
+		E1B081D122F141200065666E /* Matrix.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B081D022F141200065666E /* Matrix.swift */; };
 		E1BCAA2422CFFCDC00A5DB8D /* BarbellModel.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = E1BCAA2322CFFCDC00A5DB8D /* BarbellModel.mlmodel */; };
 		E1BCAA2822CFFD8F00A5DB8D /* BarbellDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1BCAA2722CFFD8F00A5DB8D /* BarbellDetector.swift */; };
-		E1F849B322E82A0A001302AD /* BoundingBoxDrawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F849B222E82A0A001302AD /* BoundingBoxDrawing.swift */; };
 		E1F849B522E82EAB001302AD /* BarbellManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F849B422E82EAB001302AD /* BarbellManager.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E1B081DC22F1726B0065666E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1B081D222F1726B0065666E /* Surge.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = F8A1E1AA19917A79009735E2;
+			remoteInfo = "Surge-iOS";
+		};
+		E1B081DE22F1726B0065666E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1B081D222F1726B0065666E /* Surge.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = F84A6AAE19A9A72F007B53E1;
+			remoteInfo = "SurgeTests-iOS";
+		};
+		E1B081E022F1726B0065666E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1B081D222F1726B0065666E /* Surge.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 614AD31F1FC0AD99002BFE1C;
+			remoteInfo = "Surge-macOS";
+		};
+		E1B081E222F1726B0065666E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1B081D222F1726B0065666E /* Surge.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 614AD3271FC0AD99002BFE1C;
+			remoteInfo = "SurgeTests-macOS";
+		};
+		E1B081E422F1726B0065666E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1B081D222F1726B0065666E /* Surge.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 614AD3511FC0B001002BFE1C;
+			remoteInfo = "Surge-tvOS";
+		};
+		E1B081E622F1726B0065666E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1B081D222F1726B0065666E /* Surge.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 614AD3591FC0B001002BFE1C;
+			remoteInfo = "SurgeTests-tvOS";
+		};
+		E1B081E822F1726B0065666E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1B081D222F1726B0065666E /* Surge.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 614AD3821FC0B125002BFE1C;
+			remoteInfo = "Surge-watchOS";
+		};
+		E1B081EA22F1727B0065666E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1B081D222F1726B0065666E /* Surge.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = F8A1E1A919917A79009735E2;
+			remoteInfo = "Surge-iOS";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		E14D129422AF6DEE006ADB09 /* Weightlifting.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Weightlifting.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -32,9 +91,11 @@
 		E14D12A522AF6DEF006ADB09 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E16638FB22B5A6AA000EB8F7 /* character */ = {isa = PBXFileReference; lastKnownFileType = folder; path = character; sourceTree = "<group>"; };
 		E18993B922C55678006634A6 /* BodyPartManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyPartManager.swift; sourceTree = "<group>"; };
+		E1B081C422F137540065666E /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		E1B081D022F141200065666E /* Matrix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Matrix.swift; sourceTree = "<group>"; };
+		E1B081D222F1726B0065666E /* Surge.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Surge.xcodeproj; path = "../../../Downloads/Surge-master/Surge.xcodeproj"; sourceTree = "<group>"; };
 		E1BCAA2322CFFCDC00A5DB8D /* BarbellModel.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; name = BarbellModel.mlmodel; path = "../../../../Downloads/object-detection-coreml-xcode-master/SlaloML/BarbellModel.mlmodel"; sourceTree = "<group>"; };
 		E1BCAA2722CFFD8F00A5DB8D /* BarbellDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarbellDetector.swift; sourceTree = "<group>"; };
-		E1F849B222E82A0A001302AD /* BoundingBoxDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundingBoxDrawing.swift; sourceTree = "<group>"; };
 		E1F849B422E82EAB001302AD /* BarbellManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarbellManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -52,8 +113,10 @@
 		E14D128B22AF6DED006ADB09 = {
 			isa = PBXGroup;
 			children = (
+				E1B081D222F1726B0065666E /* Surge.xcodeproj */,
 				E14D129622AF6DEE006ADB09 /* Weightlifting */,
 				E14D129522AF6DEE006ADB09 /* Products */,
+				E1B081C322F137540065666E /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -71,9 +134,9 @@
 				E14D129722AF6DEE006ADB09 /* AppDelegate.swift */,
 				E14D129922AF6DEE006ADB09 /* ViewController.swift */,
 				E1F849B422E82EAB001302AD /* BarbellManager.swift */,
-				E1F849B222E82A0A001302AD /* BoundingBoxDrawing.swift */,
-				E18993B922C55678006634A6 /* BodyPartManager.swift */,
 				E1BCAA2722CFFD8F00A5DB8D /* BarbellDetector.swift */,
+				E18993B922C55678006634A6 /* BodyPartManager.swift */,
+				E1B081D022F141200065666E /* Matrix.swift */,
 				E14D129B22AF6DEE006ADB09 /* Main.storyboard */,
 				E14D129E22AF6DEE006ADB09 /* Experience.rcproject */,
 				E1BCAA2322CFFCDC00A5DB8D /* BarbellModel.mlmodel */,
@@ -83,6 +146,28 @@
 				E14D12A522AF6DEF006ADB09 /* Info.plist */,
 			);
 			path = Weightlifting;
+			sourceTree = "<group>";
+		};
+		E1B081C322F137540065666E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E1B081C422F137540065666E /* Accelerate.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E1B081D322F1726B0065666E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E1B081DD22F1726B0065666E /* Surge.framework */,
+				E1B081DF22F1726B0065666E /* SurgeTests-iOS.xctest */,
+				E1B081E122F1726B0065666E /* Surge.framework */,
+				E1B081E322F1726B0065666E /* SurgeTests-macOS.xctest */,
+				E1B081E522F1726B0065666E /* Surge.framework */,
+				E1B081E722F1726B0065666E /* SurgeTests-tvOS.xctest */,
+				E1B081E922F1726B0065666E /* Surge.framework */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -99,6 +184,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				E1B081EB22F1727B0065666E /* PBXTargetDependency */,
 			);
 			name = Weightlifting;
 			productName = Weightlifting;
@@ -131,12 +217,70 @@
 			mainGroup = E14D128B22AF6DED006ADB09;
 			productRefGroup = E14D129522AF6DEE006ADB09 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = E1B081D322F1726B0065666E /* Products */;
+					ProjectRef = E1B081D222F1726B0065666E /* Surge.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				E14D129322AF6DED006ADB09 /* Weightlifting */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		E1B081DD22F1726B0065666E /* Surge.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Surge.framework;
+			remoteRef = E1B081DC22F1726B0065666E /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		E1B081DF22F1726B0065666E /* SurgeTests-iOS.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = "SurgeTests-iOS.xctest";
+			remoteRef = E1B081DE22F1726B0065666E /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		E1B081E122F1726B0065666E /* Surge.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Surge.framework;
+			remoteRef = E1B081E022F1726B0065666E /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		E1B081E322F1726B0065666E /* SurgeTests-macOS.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = "SurgeTests-macOS.xctest";
+			remoteRef = E1B081E222F1726B0065666E /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		E1B081E522F1726B0065666E /* Surge.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Surge.framework;
+			remoteRef = E1B081E422F1726B0065666E /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		E1B081E722F1726B0065666E /* SurgeTests-tvOS.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = "SurgeTests-tvOS.xctest";
+			remoteRef = E1B081E622F1726B0065666E /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		E1B081E922F1726B0065666E /* Surge.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Surge.framework;
+			remoteRef = E1B081E822F1726B0065666E /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		E14D129222AF6DED006ADB09 /* Resources */ = {
@@ -159,9 +303,9 @@
 			files = (
 				E1BCAA2422CFFCDC00A5DB8D /* BarbellModel.mlmodel in Sources */,
 				E18993BA22C55678006634A6 /* BodyPartManager.swift in Sources */,
-				E1F849B322E82A0A001302AD /* BoundingBoxDrawing.swift in Sources */,
 				E14D129A22AF6DEE006ADB09 /* ViewController.swift in Sources */,
 				E14D129822AF6DEE006ADB09 /* AppDelegate.swift in Sources */,
+				E1B081D122F141200065666E /* Matrix.swift in Sources */,
 				E1BCAA2822CFFD8F00A5DB8D /* BarbellDetector.swift in Sources */,
 				E1F849B522E82EAB001302AD /* BarbellManager.swift in Sources */,
 				E14D129F22AF6DEE006ADB09 /* Experience.rcproject in Sources */,
@@ -169,6 +313,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E1B081EB22F1727B0065666E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "Surge-iOS";
+			targetProxy = E1B081EA22F1727B0065666E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		E14D129B22AF6DEE006ADB09 /* Main.storyboard */ = {
