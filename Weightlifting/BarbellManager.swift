@@ -41,7 +41,7 @@ class BarbellManager {
         }
         
         //&& (frontBarbellPositions.last!.intersects(objectBounds))
-        if frontBarbellPositions.count > 0 && frontBarbellPositions.last!. (objectBounds) {
+        if frontBarbellPositions.count > 0 && frontBarbellPositions.last!.intersects(objectBounds) {
             return updatePosition(position: objectBounds, type: .front)
         }
         
