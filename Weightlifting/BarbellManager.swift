@@ -14,15 +14,15 @@ import UIKit
 class BarbellManager {
     var frontBarbellInitial: CGPoint?
     var backBarbellInitial: CGPoint?
-
+    
     var frontBarbellPositions: [CGRect] = []
     var backBarbellPositions: [CGRect] = []
-
+    
     init() {
         frontBarbellInitial = nil
         backBarbellInitial = nil
     }
-
+    
     func setBarbellInitial(position: CGPoint, type: BarbellType) {
         switch type {
         case .front:
@@ -31,36 +31,36 @@ class BarbellManager {
             backBarbellInitial = position
         }
     }
-
+    
     func analyzeObservation(objectBounds: CGRect) -> (CGRect?, BarbellType?) {
         guard let frontInit = frontBarbellInitial else {
             return (nil, nil)
         }
-
+        
         if frontBarbellPositions.count == 0, objectBounds.contains(frontInit) {
             return updatePosition(position: objectBounds, type: .front)
         }
-
+        
         // && (frontBarbellPositions.last!.intersects(objectBounds))
         if frontBarbellPositions.count > 0, frontBarbellPositions.last!.intersects(objectBounds) {
             return updatePosition(position: objectBounds, type: .front)
         }
-
+        
         guard let backInit = backBarbellInitial else {
             return (nil, nil)
         }
-
+        
         if backBarbellPositions.count == 0, objectBounds.contains(backInit) {
             return updatePosition(position: objectBounds, type: .back)
         }
-
+        
         if backBarbellPositions.count > 0, backBarbellPositions.last!.intersects(objectBounds) {
             return updatePosition(position: objectBounds, type: .back)
         }
-
+        
         return (nil, nil)
     }
-
+    
     func updatePosition(position: CGRect, type: BarbellType) -> (CGRect?, BarbellType) {
         switch type {
         case .front:
@@ -71,7 +71,7 @@ class BarbellManager {
             return (backBarbellPositions.last, .back)
         }
     }
-
+    
     func updateBarbellRect(_ frames: [CGRect], _ rect: CGRect) -> CGRect {
         if frames.count < 5 {
             return rect
@@ -83,21 +83,20 @@ class BarbellManager {
             width = width + rect.width
             height = height + rect.height
         }
-
+        
         let diffX = rect.origin.x - finalFrames.last!.origin.x
         var rect = CGRect(x: finalFrames.last!.origin.x + 0.4 * diffX, y: rect.origin.y, width: rect.width, height: rect.height)
-
+        
         var ratio: CGFloat = 0.7
-
+        
         width = ratio * (width / CGFloat(finalFrames.count)) + (1 - ratio) * rect.width
         height = ratio * (height / CGFloat(finalFrames.count)) + (1 - ratio) * rect.height
-
+        
         let newX = (rect.midX - width / 2.0)
         let newY = (rect.midY - height / 2.0)
-
+        
         return CGRect(x: newX, y: newY, width: width, height: height)
     }
-
     
     
     
@@ -105,7 +104,8 @@ class BarbellManager {
     
     
     
-
+    
+    
     func intersectionOverUnion(firstBounds: CGRect, secondBounds: CGRect) -> CGFloat {
         let intersectionBounds = firstBounds.intersection(secondBounds)
         let interArea = intersectionBounds.width * intersectionBounds.height
@@ -114,7 +114,7 @@ class BarbellManager {
         let unionArea = firstBoundsArea + secondBoundsArea - interArea
         return interArea / unionArea
     }
-
+    
     func transformPrediction(bounds: CGRect) -> Matrix {
         return Matrix([Double(bounds.origin.x), Double(bounds.origin.y), Double(bounds.width/bounds.height), Double(bounds.height)])
     }
@@ -140,8 +140,8 @@ class BarbellManager {
         ])
     let stdWeightPosition:Double = 1.0 / 20.0
     let stdWeightVelocity:Double = 1.0 / 160.0
-
-    func initializeKalman(matrix: Matrix) -> kalmanData {
+    
+    func initializeKalman(matrix: Matrix) -> KalmanData {
         let mean = Matrix([matrix.grid[0], matrix.grid[1], matrix.grid[2], matrix.grid[3], 0.0, 0.0, 0.0, 0.0])
         let standardDeviation = Matrix([
             [0.0001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -152,11 +152,11 @@ class BarbellManager {
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0001, 0.0, 0.0],
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0001, 0.0],
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0001],
-        ])
-        return kalmanData(mean: mean, covariance: standardDeviation)
+            ])
+        return KalmanData(mean: mean, covariance: standardDeviation)
     }
-
-    func predict(mean: Matrix, covariance: Matrix) -> kalmanData {
+    
+    func predict(mean: Matrix, covariance: Matrix) -> KalmanData {
         let motionCovariance = Matrix([
             [0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             [0.0, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -166,13 +166,13 @@ class BarbellManager {
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0],
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0000000001, 0.0],
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0000000001],
-        ])
+            ])
         let updatedMean = (motionMatrix <*> mean.transpose()).transpose()
         let result = motionMatrix <*> covariance <*> motionMatrix.transpose() + motionCovariance
-        return kalmanData(mean: updatedMean, covariance: result)
+        return KalmanData(mean: updatedMean, covariance: result)
     }
     
-    func project(mean: Matrix, covariance: Matrix) -> kalmanData {
+    func project(mean: Matrix, covariance: Matrix) -> KalmanData {
         let val = (stdWeightPosition * mean.grid[3])
         let std = Matrix([val*val, val*val, 1, val*val])
         let innovationCovariance = Matrix([
@@ -180,10 +180,10 @@ class BarbellManager {
             [0,std.grid[1],0,0],
             [0,0,std.grid[2],0],
             [0,0,0,std.grid[3]],
-        ])
+            ])
         var m = updateMatrix <*> mean.transpose()
         let c = updateMatrix <*> covariance <*> updateMatrix.transpose()
-        return kalmanData(mean: m, covariance: c + innovationCovariance)
+        return KalmanData(mean: m, covariance: c + innovationCovariance)
     }
     
     func cholesky(matrix: [Double], n: Int) -> [Double] {
@@ -239,7 +239,7 @@ class BarbellManager {
         return res
     }
     
-    func update(mean: Matrix, covariance: Matrix, measurement: Matrix) -> kalmanData {
+    func update(mean: Matrix, covariance: Matrix, measurement: Matrix) -> KalmanData {
         let projection = project(mean: mean, covariance: covariance)
         
         let innovation = measurement - projection.mean.transpose()
@@ -253,65 +253,66 @@ class BarbellManager {
         let flattenedSolutionMatrix = solutionMatrix.flatMap({$0})
         let yMatrix = solveCholeskyForward(lMatrix: chol_factor.grid, bMatrix: flattenedSolutionMatrix, n: 4)
         let flattenedGain = solveCholeskyBackward(lMatrix: cholMatrix.transpose().array.flatMap({$0}), bMatrix: yMatrix, n: 4)
-        let kalmanGain =  Matrix(stride(from: 0, to: flattenedGain.count, by: 4).map {
-            Array(flattenedGain[$0..<$0+4])
-        })
+        let kalmanGain =  Matrix(stride(from: 0, to: flattenedGain.count, by: 8).map {
+            Array(flattenedGain[$0..<$0+8])
+        }).transpose()
         
         let newMean = mean + innovation <*> kalmanGain.transpose()
         let newCovariance = covariance - (kalmanGain <*> projection.covariance <*> kalmanGain.transpose())
-        return kalmanData(mean: newMean, covariance: newCovariance)
+        return KalmanData(mean: newMean, covariance: newCovariance)
     }
     
-    func kalmanLoop(mean: Matrix, covariance: Matrix, measurement: Matrix) -> kalmanData {
+    func kalmanLoop(mean: Matrix, covariance: Matrix, measurement: Matrix) -> KalmanData {
         let updateData = update(mean: mean, covariance: covariance, measurement: measurement)
         let predictedData = predict(mean: updateData.mean, covariance: updateData.covariance)
         return predictedData
         
     }
     
-    var kalmanActionRun = false
     let sentinel = CGRect(x: 0, y: 0, width: 0, height: 0)
-    var frontKalman: kalmanData?
-    var backKalman: kalmanData?
+    var frontKalman: KalmanData?
+    var backKalman: KalmanData?
+    
+    func setupKalman() {
+        frontKalman = initializeKalman(matrix: transformPrediction(bounds: self.frontBarbellPositions.first!))
+        backKalman = initializeKalman(matrix: transformPrediction(bounds: self.backBarbellPositions.first!))
+    }
     
     func kalmanAction() {
         
-        if kalmanActionRun == false {
-            frontKalman = initializeKalman(matrix: transformPrediction(bounds: self.frontBarbellPositions.first!))
-            backKalman = initializeKalman(matrix: transformPrediction(bounds: self.backBarbellPositions.first!))
-            kalmanActionRun = true
+        // Set to initial random value
+        var z1: Matrix = frontKalman!.mean
+        var z2: Matrix = backKalman!.mean
+        
+        let frontBarbell = frontBarbellPositions.removeLast()
+        let backBarbell = backBarbellPositions.removeLast()
+        
+        if (!frontBarbell.equalTo(sentinel)) {
+            z1 = transformPrediction(bounds: frontBarbell)
         } else {
-            
-            // Set to initial random value
-            var z1: Matrix = frontKalman!.mean
-            var z2: Matrix = backKalman!.mean
-            
-            var frontBarbell = frontBarbellPositions.removeLast()
-            var backBarbell = backBarbellPositions.removeLast()
-            
-            if (!frontBarbell.equalTo(sentinel)) {
-                z1 = transformPrediction(bounds: frontBarbell)
-            } else {
-                z1 = Matrix(Array(predict(mean: frontKalman!.mean, covariance: frontKalman!.covariance).mean.grid.prefix(4)))
-            }
-            
-            if (!backBarbell.equalTo(sentinel)) {
-                z2 = transformPrediction(bounds: backBarbell)
-            } else {
-                z2 = Matrix(Array(predict(mean: backKalman!.mean, covariance: backKalman!.covariance).mean.grid.prefix(4)))
-            }
-            
-            frontKalman = kalmanLoop(mean: frontKalman!.mean, covariance: frontKalman!.covariance, measurement: z1)
-            backKalman = kalmanLoop(mean: backKalman!.mean, covariance: backKalman!.covariance, measurement: z2)
-            
-            frontBarbellPositions.append(frontKalman!.getRect())
-            backBarbellPositions.append(backKalman!.getRect())
-            
+            z1 = Matrix(Array(predict(mean: frontKalman!.mean, covariance: frontKalman!.covariance).mean.grid.prefix(4)))
         }
+        
+        if (!backBarbell.equalTo(sentinel)) {
+            z2 = transformPrediction(bounds: backBarbell)
+        } else {
+            z2 = Matrix(Array(predict(mean: backKalman!.mean, covariance: backKalman!.covariance).mean.grid.prefix(4)))
+        }
+        
+        frontKalman = kalmanLoop(mean: frontKalman!.mean, covariance: frontKalman!.covariance, measurement: z1)
+        backKalman = kalmanLoop(mean: backKalman!.mean, covariance: backKalman!.covariance, measurement: z2)
+        
+        print(frontKalman!.getRect())
+        print(backKalman!.getRect())
+        
+        frontBarbellPositions.append(frontKalman!.getRect())
+        backBarbellPositions.append(backKalman!.getRect())
+        
+        
     }
 }
 
-struct kalmanData {
+struct KalmanData {
     var mean: Matrix
     var covariance: Matrix
     
@@ -319,7 +320,7 @@ struct kalmanData {
         let arr = mean.grid
         return CGRect(x: arr[0], y: arr[1], width: arr[2] * arr[3], height: arr[3])
     }
- }
+}
 
 // MARK: - Bounding Box overlay drawing extension
 
@@ -341,7 +342,7 @@ extension BarbellManager {
         textLayer.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: 1.0, y: -1.0))
         return textLayer
     }
-
+    
     func createRoundedRectLayerWithBounds(_ type: BarbellType, bounds: CGRect) -> CALayer {
         let shapeLayer = CALayer()
         shapeLayer.bounds = bounds
@@ -356,7 +357,7 @@ extension BarbellManager {
         // .transform = CATransform3DMakeRotation(270.0 / 180.0 * .pi, 0.0, 0.0, 1.0)
         return shapeLayer
     }
-
+    
     func createLineLayerWithBounds(_ bounds: CGRect) -> CALayer {
         let shapeLayer = CALayer()
         shapeLayer.bounds = CGRect(x: bounds.midX - 30, y: bounds.midY - 30, width: 30, height: 30)

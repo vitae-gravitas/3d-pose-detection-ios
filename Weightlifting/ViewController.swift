@@ -59,21 +59,21 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
         arView.session.run(configuration)
 
         // Comment this line out if you don't want the 3D skeleton to render on the iPhone
-        arView.scene.addAnchor(characterAnchor)
+        //arView.scene.addAnchor(characterAnchor)
 
-        // Asynchronously load the 3D character.
-        _ = Entity.loadBodyTrackedAsync(named: "character/robot").sink(receiveCompletion: { completion in
-            if case let .failure(error) = completion {
-                print("Error: Unable to load model: \(error.localizedDescription)")
-            }
-        }, receiveValue: { (character: Entity) in
-            if let character = character as? BodyTrackedEntity {
-                character.scale = [1.0, 1.0, 1.0]
-                self.character = character
-            } else {
-                print("Error: Unable to load model as BodyTrackedEntity")
-            }
-        })
+//         Asynchronously load the 3D character.
+//        _ = Entity.loadBodyTrackedAsync(named: "character/robot").sink(receiveCompletion: { completion in
+//            if case let .failure(error) = completion {
+//                print("Error: Unable to load model: \(error.localizedDescription)")
+//            }
+//        }, receiveValue: { (character: Entity) in
+//            if let character = character as? BodyTrackedEntity {
+//                character.scale = [1.0, 1.0, 1.0]
+//                self.character = character
+//            } else {
+//                print("Error: Unable to load model as BodyTrackedEntity")
+//            }
+//        })
     }
 
     var count = 0
@@ -81,6 +81,7 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
     func session(_: ARSession, didUpdate frame: ARFrame) {
         count = count + 1
         
+        if count % 2 == 0 {
             let buffer = frame.capturedImage
 
             bufferWidth = Float(CVPixelBufferGetWidth(buffer))
@@ -101,12 +102,13 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
                     self.generateBoundingBox(observations: observations)
                 })
             }
+        }
         
     }
 
     func session(_: ARSession, didUpdate anchors: [ARAnchor]) {
         guard character != nil else {
-            print("Character has not been found")
+            //print("Character has not been found")
             return
         }
 
@@ -150,6 +152,34 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
         }
     }
     
+    func sortResults(results: [VNRecognizedObjectObservation]) -> [VNRecognizedObjectObservation] {
+        let topFront = results.sorted(by: {
+            let intersec = $0.boundingBox.intersection(barbellManager.frontBarbellPositions.last!)
+            let intersec2 = $1.boundingBox.intersection(barbellManager.frontBarbellPositions.last!)
+            return intersec.width * intersec.height > intersec2.width * intersec2.height
+            
+        }).first
+        
+        let topBack = results.sorted(by: {
+            let intersec = $0.boundingBox.intersection(barbellManager.backBarbellPositions.last!)
+            let intersec2 = $1.boundingBox.intersection(barbellManager.backBarbellPositions.last!)
+            return intersec.width * intersec.height > intersec2.width * intersec2.height
+            
+        }).first
+        
+        var final:[VNRecognizedObjectObservation] = []
+        if topFront != nil {
+            final.append(topFront!)
+        }
+        if topBack != nil {
+            final.append(topBack!)
+        }
+        
+        return final
+    }
+    
+    var gotFirst = false
+    
     func getTopResults(_ results: [Any], numResults: Int = 2, targetLabel: String = "mainPlate") -> ArraySlice<VNRecognizedObjectObservation> {
         var topResults: [VNRecognizedObjectObservation] = []
         
@@ -162,6 +192,11 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
                 topResults.append(objectObservation)
             }
         }
+//        if !gotFirst {
+//            topResults = topResults.sorted(by: { $0.labels[0].confidence > $1.labels[0].confidence })
+//        } else {
+//            topResults = sortResults(results: topResults)
+//        }
         topResults = topResults.sorted(by: { $0.labels[0].confidence > $1.labels[0].confidence })
         var finalResults = topResults.prefix(numResults)
         
@@ -181,22 +216,25 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
             } else if barbellManager.backBarbellPositions.count == 0 {
                 if objectBounds.contains(barbellManager.backBarbellInitial!) {
                     barbellManager.backBarbellPositions.append(objectBounds)
+                    barbellManager.setupKalman()
                 }
             } else {
+                let iouThreshold:CGFloat = 0.1
+                gotFirst = true
                 let iouFirst = barbellManager.intersectionOverUnion(firstBounds: objectBounds, secondBounds: barbellManager.frontBarbellPositions.last!)
                 let iouSecond = barbellManager.intersectionOverUnion(firstBounds: objectBounds, secondBounds: barbellManager.backBarbellPositions.last!)
                 
-                if iouFirst > 0.1 && iouFirst >= iouSecond && foundFirst == false {
+                if iouFirst > iouThreshold && iouFirst >= iouSecond && foundFirst == false {
                     firstRect = objectBounds
                     foundFirst = true
-                } else if iouSecond > 0.1 {
+                } else if iouSecond > iouThreshold {
                     secondRect = objectBounds
                     foundSecond = true
                 }
             }
         }
         
-        if barbellManager.frontBarbellPositions.count != 0 && barbellManager.backBarbellPositions.count != 0 {
+        if gotFirst {
             barbellManager.frontBarbellPositions.append(firstRect)
             barbellManager.backBarbellPositions.append(secondRect)
             barbellManager.kalmanAction()
