@@ -81,7 +81,7 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
     func session(_: ARSession, didUpdate frame: ARFrame) {
         count = count + 1
         
-        if count % 2 == 0 {
+        if count % 1 == 0 {
             let buffer = frame.capturedImage
 
             bufferWidth = Float(CVPixelBufferGetWidth(buffer))
@@ -93,7 +93,7 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
                 updateLayerGeometry()
             }
 
-            if barbellManager.frontBarbellInitial != nil && barbellManager.backBarbellInitial != nil {
+            if barbellManager.frontBarbellInitial != nil {
                 let buffer = frame.capturedImage
                 detector.performDetection(buffer: buffer, completion: { (obs, _) -> Void in
                     guard let observations = obs else {
@@ -146,38 +146,36 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
             print(position)
             if barbellManager.frontBarbellInitial == nil {
                 barbellManager.setBarbellInitial(position: position, type: .front)
-            } else if barbellManager.backBarbellInitial == nil {
-                barbellManager.setBarbellInitial(position: position, type: .back)
             }
         }
     }
     
-    func sortResults(results: [VNRecognizedObjectObservation]) -> [VNRecognizedObjectObservation] {
-        let topFront = results.sorted(by: {
-            let intersec = $0.boundingBox.intersection(barbellManager.frontBarbellPositions.last!)
-            let intersec2 = $1.boundingBox.intersection(barbellManager.frontBarbellPositions.last!)
-            return intersec.width * intersec.height > intersec2.width * intersec2.height
-            
-        }).first
-        
-        let topBack = results.sorted(by: {
-            let intersec = $0.boundingBox.intersection(barbellManager.backBarbellPositions.last!)
-            let intersec2 = $1.boundingBox.intersection(barbellManager.backBarbellPositions.last!)
-            return intersec.width * intersec.height > intersec2.width * intersec2.height
-            
-        }).first
-        
-        var final:[VNRecognizedObjectObservation] = []
-        if topFront != nil {
-            final.append(topFront!)
-        }
-        if topBack != nil {
-            final.append(topBack!)
-        }
-        
-        return final
-    }
-    
+//    func sortResults(results: [VNRecognizedObjectObservation]) -> [VNRecognizedObjectObservation] {
+//        let topFront = results.sorted(by: {
+//            let intersec = $0.boundingBox.intersection(barbellManager.frontBarbellPositions.last!)
+//            let intersec2 = $1.boundingBox.intersection(barbellManager.frontBarbellPositions.last!)
+//            return intersec.width * intersec.height > intersec2.width * intersec2.height
+//
+//        }).first
+//
+//        let topBack = results.sorted(by: {
+//            let intersec = $0.boundingBox.intersection(barbellManager.backBarbellPositions.last!)
+//            let intersec2 = $1.boundingBox.intersection(barbellManager.backBarbellPositions.last!)
+//            return intersec.width * intersec.height > intersec2.width * intersec2.height
+//
+//        }).first
+//
+//        var final:[VNRecognizedObjectObservation] = []
+//        if topFront != nil {
+//            final.append(topFront!)
+//        }
+//        if topBack != nil {
+//            final.append(topBack!)
+//        }
+//
+//        return final
+//    }
+//
     var gotFirst = false
     
     func getTopResults(_ results: [Any], numResults: Int = 2, targetLabel: String = "mainPlate") -> ArraySlice<VNRecognizedObjectObservation> {
@@ -198,45 +196,38 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
 //            topResults = sortResults(results: topResults)
 //        }
         topResults = topResults.sorted(by: { $0.labels[0].confidence > $1.labels[0].confidence })
-        var finalResults = topResults.prefix(numResults)
+        var finalResults = topResults.prefix(1)
         
-        var foundFirst = false
-        var foundSecond = false
+        if finalResults.count == 0 {
+            return finalResults
+        }
         
         var firstRect:CGRect = CGRect(x: 0, y: 0, width: 0, height: 0)
-        var secondRect:CGRect = CGRect(x: 0, y: 0, width: 0, height: 0)
-    
+        var iouThreshold:CGFloat = 0.1
+        
         for result in finalResults {
             
             let objectBounds = VNImageRectForNormalizedRect( result.boundingBox, Int(self.bufferWidth), Int(self.bufferHeight))
             if barbellManager.frontBarbellPositions.count == 0 {
                 if objectBounds.contains(barbellManager.frontBarbellInitial!) {
                     barbellManager.frontBarbellPositions.append(objectBounds)
-                }
-            } else if barbellManager.backBarbellPositions.count == 0 {
-                if objectBounds.contains(barbellManager.backBarbellInitial!) {
-                    barbellManager.backBarbellPositions.append(objectBounds)
                     barbellManager.setupKalman()
                 }
-            } else {
-                let iouThreshold:CGFloat = 0.1
+            }  else {
                 gotFirst = true
-                let iouFirst = barbellManager.intersectionOverUnion(firstBounds: objectBounds, secondBounds: barbellManager.frontBarbellPositions.last!)
-                let iouSecond = barbellManager.intersectionOverUnion(firstBounds: objectBounds, secondBounds: barbellManager.backBarbellPositions.last!)
-                
-                if iouFirst > iouThreshold && iouFirst >= iouSecond && foundFirst == false {
-                    firstRect = objectBounds
-                    foundFirst = true
-                } else if iouSecond > iouThreshold {
-                    secondRect = objectBounds
-                    foundSecond = true
-                }
+                firstRect = objectBounds
+//                let iouFirst = barbellManager.intersectionOverUnion(firstBounds: objectBounds, secondBounds: barbellManager.frontBarbellPositions.last!)
+//
+//                if iouFirst > iouThreshold {
+//                    firstRect = objectBounds
+//                    iouThreshold = iouFirst
+//
+//                }
             }
         }
         
         if gotFirst {
             barbellManager.frontBarbellPositions.append(firstRect)
-            barbellManager.backBarbellPositions.append(secondRect)
             barbellManager.kalmanAction()
         } else {
             finalResults.removeAll()
@@ -261,58 +252,22 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
             }
         }
         
-        let blah = getTopResults(observations)
         
-        if (blah.count > 0) {
-        
-            let shapeLayer = self.barbellManager.createRoundedRectLayerWithBounds(.front, bounds: barbellManager.frontBarbellPositions.last!)
+            let blah = getTopResults(observations)
+            
+            if (blah.count > 0) {
+            
+                let shapeLayer = self.barbellManager.createRoundedRectLayerWithBounds(.front, bounds: barbellManager.frontBarbellPositions.last!)
 
-            let textLayer = self.barbellManager.createTextSubLayerInBounds(barbellManager.frontBarbellPositions.last!,
-                                                                           identifier: "Main Barbell",
-                                                                           confidence: 0.99)
-            shapeLayer.addSublayer(textLayer)
-            detectionOverlay.addSublayer(shapeLayer)
-            
-            let shapeLayer2 = self.barbellManager.createRoundedRectLayerWithBounds(.back, bounds: barbellManager.backBarbellPositions.last!)
-            
-            let textLayer2 = self.barbellManager.createTextSubLayerInBounds(barbellManager.backBarbellPositions.last!,
-                                                                           identifier: "Main Barbell",
-                                                                           confidence: 0.99)
-            shapeLayer2.addSublayer(textLayer2)
-            detectionOverlay.addSublayer(shapeLayer2)
-        }
+                let textLayer = self.barbellManager.createTextSubLayerInBounds(barbellManager.frontBarbellPositions.last!,
+                                                                               identifier: "Main Barbell",
+                                                                               confidence: 0.99)
+                shapeLayer.addSublayer(textLayer)
+                detectionOverlay.addSublayer(shapeLayer)
+            }
         
-//        for observation in getTopResults(observations) where observation is VNRecognizedObjectObservation {
-//            guard let objectObservation = observation as? VNRecognizedObjectObservation else {
-//                continue
-//            }
-//
-//            // Select only the label with the highest confidence.
-//            let topLabelObservation = objectObservation.labels[0]
-//
-//            var objectBounds = VNImageRectForNormalizedRect( objectObservation.boundingBox, Int(self.bufferWidth), Int(self.bufferHeight))
-//
-//            let boundData = self.barbellManager.analyzeObservation(objectBounds: objectBounds)
-//
-//            guard let boundRect = boundData.0 else {
-//                continue
-//            }
-//            guard let boundType = boundData.1 else {
-//                continue
-//            }
-//
-//            let shapeLayer = self.barbellManager.createRoundedRectLayerWithBounds(boundType, bounds: boundRect)
-//
-//            let textLayer = self.barbellManager.createTextSubLayerInBounds(boundRect,
-//                                                                           identifier: topLabelObservation.identifier,
-//                                                                           confidence: topLabelObservation.confidence.magnitude)
-//
-//            shapeLayer.addSublayer(textLayer)
-//            detectionOverlay.addSublayer(shapeLayer)
-//            //            let lineLayer = self.barbellManager.createLineLayerWithBounds(boundRect)
-//            //            lineLayers.append(lineLayer)
-//            //            detectionOverlay.addSublayer(lineLayer)
-//        }
+        
+
         updateLayerGeometry()
         CATransaction.commit()
     }
@@ -391,4 +346,7 @@ class ViewController: UIViewController, ARSessionDelegate, UIGestureRecognizerDe
         return averageRect
     }
     
+    func resetData() {
+        
+    }
 }

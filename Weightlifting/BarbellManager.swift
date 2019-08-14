@@ -13,23 +13,22 @@ import UIKit
 
 class BarbellManager {
     var frontBarbellInitial: CGPoint?
-    var backBarbellInitial: CGPoint?
-    
     var frontBarbellPositions: [CGRect] = []
-    var backBarbellPositions: [CGRect] = []
     
     init() {
         frontBarbellInitial = nil
-        backBarbellInitial = nil
     }
     
     func setBarbellInitial(position: CGPoint, type: BarbellType) {
         switch type {
         case .front:
             frontBarbellInitial = position
-        case .back:
-            backBarbellInitial = position
         }
+    }
+    
+    func resetData() {
+        self.frontBarbellInitial = nil
+        self.frontBarbellPositions.removeAll()
     }
     
     func analyzeObservation(objectBounds: CGRect) -> (CGRect?, BarbellType?) {
@@ -46,18 +45,6 @@ class BarbellManager {
             return updatePosition(position: objectBounds, type: .front)
         }
         
-        guard let backInit = backBarbellInitial else {
-            return (nil, nil)
-        }
-        
-        if backBarbellPositions.count == 0, objectBounds.contains(backInit) {
-            return updatePosition(position: objectBounds, type: .back)
-        }
-        
-        if backBarbellPositions.count > 0, backBarbellPositions.last!.intersects(objectBounds) {
-            return updatePosition(position: objectBounds, type: .back)
-        }
-        
         return (nil, nil)
     }
     
@@ -66,9 +53,6 @@ class BarbellManager {
         case .front:
             frontBarbellPositions.append(updateBarbellRect(frontBarbellPositions, frontBarbellPositions.removeLast()))
             return (frontBarbellPositions.last, .front)
-        case .back:
-            backBarbellPositions.append(updateBarbellRect(backBarbellPositions, backBarbellPositions.removeLast()))
-            return (backBarbellPositions.last, .back)
         }
     }
     
@@ -158,12 +142,12 @@ class BarbellManager {
     
     func predict(mean: Matrix, covariance: Matrix) -> KalmanData {
         let motionCovariance = Matrix([
-            [0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             [0.0, 0.0, 0.0000000001, 0.0, 0.0, 0.0, 0.0, 0.0],
             [0.0, 0.0, 0.0, 0.0000000001, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.05, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.0, 0.0],
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0000000001, 0.0],
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0000000001],
             ])
@@ -275,17 +259,14 @@ class BarbellManager {
     
     func setupKalman() {
         frontKalman = initializeKalman(matrix: transformPrediction(bounds: self.frontBarbellPositions.first!))
-        backKalman = initializeKalman(matrix: transformPrediction(bounds: self.backBarbellPositions.first!))
     }
     
     func kalmanAction() {
         
         // Set to initial random value
         var z1: Matrix = frontKalman!.mean
-        var z2: Matrix = backKalman!.mean
         
         let frontBarbell = frontBarbellPositions.removeLast()
-        let backBarbell = backBarbellPositions.removeLast()
         
         if (!frontBarbell.equalTo(sentinel)) {
             z1 = transformPrediction(bounds: frontBarbell)
@@ -293,20 +274,12 @@ class BarbellManager {
             z1 = Matrix(Array(predict(mean: frontKalman!.mean, covariance: frontKalman!.covariance).mean.grid.prefix(4)))
         }
         
-        if (!backBarbell.equalTo(sentinel)) {
-            z2 = transformPrediction(bounds: backBarbell)
-        } else {
-            z2 = Matrix(Array(predict(mean: backKalman!.mean, covariance: backKalman!.covariance).mean.grid.prefix(4)))
-        }
         
         frontKalman = kalmanLoop(mean: frontKalman!.mean, covariance: frontKalman!.covariance, measurement: z1)
-        backKalman = kalmanLoop(mean: backKalman!.mean, covariance: backKalman!.covariance, measurement: z2)
-        
+       
         print(frontKalman!.getRect())
-        print(backKalman!.getRect())
-        
+    
         frontBarbellPositions.append(frontKalman!.getRect())
-        backBarbellPositions.append(backKalman!.getRect())
         
         
     }
@@ -371,5 +344,4 @@ extension BarbellManager {
 
 enum BarbellType {
     case front
-    case back
 }
